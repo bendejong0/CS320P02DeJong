@@ -43,7 +43,9 @@ int main() {
 
 		points = getPointVector(myFile);
 		mergesort(points, 0, points.size()-1, xComp);
-		cout << divide(points, 0, points.size() - 1);
+		pairPoints closest = divide(points, 0, points.size() - 1);
+		cout << "Closest pair: " << closest.first << " " << closest.second << endl;
+		cout << "Distance: " << findDistance(closest.first, closest.second);
 		myFile.close();
 	}
 	else {
@@ -76,7 +78,9 @@ string getFileName() {
 
 template <typename Comparator>
 void mergesort(vector<Point>&points, size_t left, size_t right, Comparator comp) {
-
+	if (points.size() == 0 || points.size() == 1) {
+		return;
+	}
 	if (left >= right) {
 		return;
 	}
@@ -135,11 +139,13 @@ inline double findDistance(const Point& a, const Point& b) {
 
 
 pair<Point, Point> stripClosest(vector<Point>& strip, double dist) {
+	if (strip.size() < 2)
+		return pairPoints(Point(INFINITY, INFINITY), Point(INFINITY, INFINITY));
+
 	double min = dist;
 	Point::CompareYCoordinate compY;
-	// potentially add case strip.size < 2 return 2 infinity points	
 	mergesort(strip, 0, strip.size() - 1, compY);
-	pair<Point, Point> closestPair;
+	pair<Point, Point> closestPair(Point(INFINITY, INFINITY), Point(INFINITY, INFINITY));
 	for (size_t i = 0; i < strip.size(); i++) {
 		for (size_t j = i + 1; j < strip.size() && (strip[j].getY() - strip[i].getY()) < min; j++) {
 			if (findDistance(strip[i], strip[j]) < min) {
@@ -153,6 +159,10 @@ pair<Point, Point> stripClosest(vector<Point>& strip, double dist) {
 }
 
 pair<Point, Point> divide(vector<Point>& p, size_t floor, size_t size) {
+
+	// if there's zero points
+	if (floor == size)
+		return pairPoints(Point(INFINITY, INFINITY), Point(INFINITY, INFINITY));
 
 	// if theres 3 or less points
 	if (size - floor <= 2) {
@@ -172,7 +182,7 @@ pair<Point, Point> divide(vector<Point>& p, size_t floor, size_t size) {
 	}
 
 	size_t mid = (floor + size) / 2;
-	const Point& midPoint = p[mid];
+	Point midPoint = p[mid];
 
 	pair<Point, Point> leftClosest = divide(p, floor, mid);
 	double leftDist = findDistance(leftClosest.first, leftClosest.second);
@@ -183,7 +193,7 @@ pair<Point, Point> divide(vector<Point>& p, size_t floor, size_t size) {
 	pair<Point, Point> closestPair = min(leftClosest, rightClosest);
 
 	vector<Point> strip;
-	for (size_t i = floor; i <= size; i++) { // Iterate through ALL points
+	for (size_t i = floor; i <= size; i++) {
 		if (abs(p[i].getX() - midPoint.getX()) < smallestDist) {
 			strip.push_back(p[i]);
 		}
@@ -193,6 +203,7 @@ pair<Point, Point> divide(vector<Point>& p, size_t floor, size_t size) {
 
 	return (stripDist < smallestDist) ? stripPair : closestPair;
 }
+
 inline double min(double x, double y) {
 	return (x < y ? x : y);
 }
