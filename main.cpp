@@ -6,41 +6,49 @@
 #include <math.h>
 #include <utility>
 using namespace std;
+
+#define pairPoints pair<Point,Point>
+
 inline double square(double a) { return a * a; }
+
 string getFileName();
-vector<Point> getPointVector(ifstream& myFile);
+
+vector<Point> getPointVector(ifstream & myFile);
+
+template <typename Comparator>
+void merge(vector<Point>& points, size_t left, size_t right, size_t middle, Comparator comp);
+
 template<typename Comparator>
-void mergesort(vector<Point>& points, size_t left, size_t right, Comparator comp);
-ostream& operator<<(ostream& os, const vector<Point>& vec);
-double findDistance(const Point& a, const Point& b);
-pair<Point, Point> findSmallestDistance(const Point& a, const Point& b);
+void mergesort(vector<Point>&points, size_t left, size_t right, Comparator comp);
 
-
+ostream& operator<<(ostream & os, const vector<Point>&vec);
+double findDistance(const Point & a, const Point & b);
+pair<Point, Point> divide(vector<Point>& p, size_t floor, size_t size);
+ostream& operator<<(ostream & os, pair<Point, Point>p) {
+	os << p.first << " " << p.second;
+	return os;
+}
+inline double min(double x, double y);
+inline pair<Point, Point> min(pair<Point, Point> x, pair<Point, Point> y);
 
 
 int main() {
 	ifstream myFile;
 	vector<Point> points;
 	Point::CompareXCoordinate xComp;
-	Point::CompareYCoordinate yComp;
 	myFile.open(getFileName());
-	
+
 	if (myFile.is_open()) {
 		cout << "File successfully opened\n" << endl;
 
 		points = getPointVector(myFile);
-		size_t left{ 0 };
-		size_t right{ points.size() - 1 };
-		mergesort(points, left, right, xComp);
-		cout << divideGraph(points, 0, points.size()-1);
-		
-
-myFile.close();
+		mergesort(points, 0, points.size()-1, xComp);
+		cout << divide(points, 0, points.size() - 1);
+		myFile.close();
 	}
 	else {
 		cout << "File could not be opened\n" << endl;
 	}
-
 
 	return 0;
 }
@@ -67,10 +75,11 @@ string getFileName() {
 }
 
 template <typename Comparator>
-void mergesort(vector<Point>& points, size_t left, size_t right, Comparator comp) {
+void mergesort(vector<Point>&points, size_t left, size_t right, Comparator comp) {
 
-	if (left >= right)
+	if (left >= right) {
 		return;
+	}
 	size_t middle{ left + (right - left) / 2 };
 	mergesort(points, left, middle, comp);
 	mergesort(points, middle + 1, right, comp);
@@ -78,7 +87,7 @@ void mergesort(vector<Point>& points, size_t left, size_t right, Comparator comp
 }
 
 template <typename Comparator>
-void merge(vector<Point>& points, size_t left, size_t right, size_t middle, Comparator comp) {
+void merge(vector<Point>&points, size_t left, size_t right, size_t middle, Comparator comp) {
 	size_t lhSize{ middle + 1 - left };
 	size_t rhSize{ right - middle };
 	vector<Point> lhVec(points.begin() + left, points.begin() + middle + 1);
@@ -111,54 +120,82 @@ void merge(vector<Point>& points, size_t left, size_t right, size_t middle, Comp
 
 }
 
-ostream& operator<<(ostream& os, const vector<Point>& vec) {
+ostream& operator<<(ostream & os, const vector<Point>&vec) {
 	for (const auto& i : vec) {
 		os << i << endl;
 	}
 	return os;
 }
 
-double findDistance(const Point& a, const Point& b) {
+inline double findDistance(const Point& a, const Point& b) {
 	double xDist = a.getX() - b.getX();
-	double yDist = a.getY() - a.getY();
+	double yDist = a.getY() - b.getY();
 	return sqrt(square(xDist) + square(yDist));
 }
 
-double stripClosest(vector<Point> strip, double smallestDist) {
-	double minDist = smallestDist;
-	Point::CompareXCoordinate comp;
-	mergesort(strip, 0, strip.size(), comp);
+
+pair<Point, Point> stripClosest(vector<Point>& strip, double dist) {
+	double min = dist;
+	Point::CompareYCoordinate compY;
+	// potentially add case strip.size < 2 return 2 infinity points	
+	mergesort(strip, 0, strip.size() - 1, compY);
+	pair<Point, Point> closestPair;
 	for (size_t i = 0; i < strip.size(); i++) {
-		for (size_t j = i + 1; j < strip.size() && (strip[j].getY() - strip[i].getY()) < minDist; j++) {
-			if (findDistance(strip[i], strip[j]) < minDist){
-				minDist = findDistance(strip[i], strip[j]);
+		for (size_t j = i + 1; j < strip.size() && (strip[j].getY() - strip[i].getY()) < min; j++) {
+			if (findDistance(strip[i], strip[j]) < min) {
+				min = findDistance(strip[i], strip[j]);
+				closestPair.first = strip[i];
+				closestPair.second = strip[j];
 			}
 		}
 	}
-	return minDist;
+	return closestPair;
 }
 
-double divideGraph(const vector<Point>& points, size_t low, size_t high) {
-	if (high - low == 1) {
-		return findDistance(points[low], points[high]);
-	}
-	if (low != high - 1) {
-		size_t midIndex = (high - low) / 2 + low;
-		Point midPoint = points[midIndex];
-		double dist1 = divideGraph(points, low, midIndex - 1);
-		double dist2 = divideGraph(points, midIndex + 1, high);
-		double smallestDist = dist1 > dist2 ? dist2 : dist1;
+pair<Point, Point> divide(vector<Point>& p, size_t floor, size_t size) {
 
-		vector<Point> strip;
-		for (size_t i = low; i <= high; i++) {
-			if (abs(points[i].getX() - midPoint.getX()) < smallestDist) {
-				strip.push_back(points[i]);
+	// if theres 3 or less points
+	if (size - floor <= 2) {
+		// just do it brute force.
+		pairPoints closestPair{ p[floor], p[floor + 1] };
+		double minDist = findDistance(closestPair.first, closestPair.second);
+		for (size_t i = floor; i <= size; i++) {
+			for (size_t j = i + 1; j <= size; j++){
+				double dist = findDistance(p[i], p[j]);
+				if (dist < minDist) {
+					minDist = dist;
+					closestPair = { p[i], p[j] };
+				}
 			}
 		}
-		double potentialClosest = stripClosest(strip, smallestDist);
-
-		double result = smallestDist < stripClosest(strip, smallestDist) ? smallestDist : stripClosest(strip, smallestDist);
-		return result;
+		return closestPair;
 	}
-	return smallestDist
+
+	size_t mid = (floor + size) / 2;
+	const Point& midPoint = p[mid];
+
+	pair<Point, Point> leftClosest = divide(p, floor, mid);
+	double leftDist = findDistance(leftClosest.first, leftClosest.second);
+	pair<Point, Point> rightClosest = divide(p, mid+1, size);
+	double rightDist = findDistance(rightClosest.first, rightClosest.second);
+
+	double smallestDist = min(leftDist, rightDist);
+	pair<Point, Point> closestPair = min(leftClosest, rightClosest);
+
+	vector<Point> strip;
+	for (size_t i = floor; i <= size; i++) { // Iterate through ALL points
+		if (abs(p[i].getX() - midPoint.getX()) < smallestDist) {
+			strip.push_back(p[i]);
+		}
+	}
+	pair<Point, Point> stripPair = stripClosest(strip, smallestDist);
+	double stripDist = findDistance(stripPair.first, stripPair.second);
+
+	return (stripDist < smallestDist) ? stripPair : closestPair;
+}
+inline double min(double x, double y) {
+	return (x < y ? x : y);
+}
+inline pair<Point, Point> min(pair<Point, Point> x, pair<Point, Point> y) {
+	return findDistance(x.first, x.second) < findDistance(y.first, y.second) ? x : y;
 }
