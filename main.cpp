@@ -44,12 +44,13 @@ int main() {
 		points = getPointVector(myFile);
 		mergesort(points, 0, points.size()-1, xComp);
 		pairPoints closest = divide(points, 0, points.size() - 1);
+		double dist = findDistance(closest.first, closest.second);
 		cout << "Closest points are: ("
 			<< fixed << setprecision(2)
 			<< closest.first << ") and ("
 			<< closest.second << ") with distance = "
 			<< fixed << setprecision(6)
-			<< closest << endl;
+			<< dist << endl;
 		myFile.close();
 	}
 	else {
@@ -82,9 +83,7 @@ string getFileName() {
 
 template <typename Comparator>
 void mergesort(vector<Point>&points, size_t left, size_t right, Comparator comp) {
-	if (points.size() == 0 || points.size() == 1) {
-		return;
-	}
+	
 	if (left >= right) {
 		return;
 	}
