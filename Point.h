@@ -93,7 +93,7 @@ ifstream & operator>>(ifstream & in, Point & p) {
 ostream & operator<<(ostream & outfile, const Point & p)
 {
 	 
-	outfile << p.getX() << ' ' << p.getY();
+	outfile << p.getX() << ", " << p.getY();
 	 
 	return outfile;
 }
